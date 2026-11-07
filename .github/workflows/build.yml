@@ -17,10 +17,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Arrange files
-        run: |
-          D=p/app/src/main
-          mkdir -p $D/java/tw/solarscout $D/res/values $D/res/drawable $D/res/mipmap-anydpi $D/assets/www
-          cp settings.gradle build.gradle gradle.properties p/
-          cp app.build.gradle p/app/build.gradle
-          cp s
+      - name: Unzip
+        run: unzip -q solarscout.zip
+      - name: Build
+        run: cd solarscout && gradle :app:assembleRelease --no-daemon && cp app/build/outputs/apk/release/app-release.apk ../SolarScout.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: SolarScout v${{ github.run_number }}
+          files: SolarScout.apk
+          make_latest: true
