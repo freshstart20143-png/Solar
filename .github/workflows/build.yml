@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -17,19 +19,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Unzip
-        run: unzip -q solarscout.zip
-      - name: Fix
+      - name: Unzip newest upload
         run: |
-          F=solarscout/app/src/main/assets/www/index.html
-          J=solarscout/app/src/main/java/tw/solarscout/MainActivity.java
-          sed -i 's#^\* { box-sizing: border-box; }$#* { box-sizing: border-box; }\n[hidden] { display: none !important; }#' $F
-          sed -i 's#z-index: 1001; left: 50%#z-index: 1200; left: 50%#' $F
-          sed -i 's#web = new WebView(this);#web = new WebView(this);\n        web.clearCache(true);#' $J
-          grep -q 'display: none !important' $F
-          grep -q 'clearCache' $J
+          Z=$(git -c core.quotepath=off log --diff-filter=AM --name-only --pretty=format: -- '*.zip' | grep -m1 '\.zip$')
+          echo "Using: $Z"
+          rm -rf src && unzip -q "$Z" -d src
       - name: Build
-        run: cd solarscout && gradle :app:assembleRelease --no-daemon && cp app/build/outputs/apk/release/app-release.apk ../SolarScout.apk
+        run: |
+          P=$(dirname "$(find src -name settings.gradle | head -1)")
+          cd "$P" && gradle :app:assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/SolarScout.apk"
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
